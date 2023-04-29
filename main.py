@@ -1,6 +1,10 @@
 from PIL import Image
 import os
 
+# Global variables
+patterns = [2, 3, 4, 5]
+temp_dir = 'temp'
+output_dir = 'output'
 products = {
     'Almofada': (2000, 1000),
     'Poster': (1000, 3000),
@@ -17,12 +21,14 @@ def load_input_file():
         return None
     return Image.open(input_path)
 
-def create_composites(image):
-    """Creates composites from the input image and saves them to the temp directory"""
-    patterns = [3, 4, 5]
-    temp_dir = "temp"
+def create_temp_directory(temp_dir):
+    """Creates the temporary directory if it doesn't already exist"""
     if not os.path.exists(temp_dir):
         os.mkdir(temp_dir)
+
+def create_composites_from_image(image, patterns, temp_dir):
+    """Creates composites from the input image and saves them to the temp directory"""
+    create_temp_directory(temp_dir)
     dpi = 150
     for pattern in patterns:
         cols = rows = pattern
@@ -39,16 +45,18 @@ def create_composites(image):
         composite.save(output_path, dpi=(dpi, dpi))
         print(f"Composite saved to {output_path}")
 
-def crop_composites(products):
-    """Resizes the composites ({image} - {cols}x{rows}) to the largest dimension of each product and then crop the excess
-    then saves the resulting products images to the output directory as output/{product}/{image} - {cols}x{rows}.png"""
-    temp_dir = "temp"
-    output_dir = "output"
+def create_output_directory(output_dir):
+    """Creates the output directory if it doesn't already exist"""
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
+
+def process_product_images(products, temp_dir, output_dir):
+    """Resizes the composites ({image} - {cols}x{rows}) to the largest dimension of each product and then crop the excess
+    then saves the resulting products images to the output directory as output/{product}/{image} - {cols}x{rows}.png"""
+    create_output_directory(output_dir)
     for product, size in products.items():
-        if not os.path.exists(os.path.join(output_dir, product)):
-            os.mkdir(os.path.join(output_dir, product))
+        product_dir = os.path.join(output_dir, product)
+        create_output_directory(product_dir)
         for filename in os.listdir(temp_dir):
             image = Image.open(os.path.join(temp_dir, filename))
             cols, rows = size
@@ -72,9 +80,10 @@ def crop_composites(products):
                 x = 0
                 y = 0
             new_image = new_image.crop((x, y, x + cols, y + rows))
-            output_path = os.path.join(output_dir, product, filename)
+            output_path = os.path.join(product_dir, filename)
             new_image.save(output_path)
             print(f"Product {product} image saved to {output_path}")
+
 
 def main():
     """Main function that prompts the user for the action to perform"""
@@ -88,12 +97,12 @@ def main():
                 print("Image loaded successfully.")
         elif action == "create":
             try:
-                create_composites(image)
+                create_composites_from_image(image, patterns, temp_dir)
             except NameError:
                 print("Error: Input file not loaded. Please load an input file first.")
         elif action == "crop":
             try:
-                crop_composites(products)
+                process_product_images(products, temp_dir, output_dir)
             except FileNotFoundError:
                 print("Error: Composites not found. Please create composites first.")
         elif action == "quit":
